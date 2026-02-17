@@ -1,0 +1,22 @@
+{
+  "configs": [
+    {
+      "db_type": "mongodb",
+      "name": "pharma_db",
+      "uri": "mongodb://admin:password@localhost:27018",
+      "database": "pharma"
+    },
+    {
+      "db_type": "qdrant",
+      "name": "vectors_db",
+      "url": "http://localhost:6333"
+    },
+    {
+      "db_type": "neo4j",
+      "name": "graph_db",
+      "uri": "bolt://localhost:7687",
+      "user": "neo4j",
+      "password": "password"
+    }
+  ]
+}

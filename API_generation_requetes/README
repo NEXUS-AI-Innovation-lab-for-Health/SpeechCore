@@ -1,0 +1,281 @@
+# API Génération de Requêtes Multi-Database v2
+
+API modulaire FastAPI qui génère des requêtes MongoDB/Qdrant/Neo4j en langage naturel via Mistral (Ollama).
+
+**✨ Nouveauté v2** : 
+- Introspection automatique du schéma réel des bases de données
+- Configuration dynamique : ajoutez n'importe quelle base à la volée
+- **Endpoint batch** : configurez plusieurs bases en une seule requête JSON
+- Prompts générés automatiquement avec la structure réelle de vos données
+
+## Architecture
+
+```
+api/
+├── main.py                    # API FastAPI avec endpoints de config et génération
+├── models.py                  # Modèles Pydantic pour les configs (MongoConfig, QdrantConfig, Neo4jConfig)
+├── llm_service.py             # Service Ollama/Mistral
+├── schema_inspectors.py       # Inspecteurs qui récupèrent la structure des bases
+├── prompt_generators.py       # Génération dynamique de prompts avec schéma injecté
+├── query_generators.py        # Générateurs modulaires par type de base
+├── requirements.txt
+└── .env
+```
+
+## Comment ça marche
+
+1. **Tu ajoutes une config de base** via `POST /config/add`
+2. **L'API crée un générateur** pour cette base
+3. **Au premier appel** à `/generate/{db_name}`, le générateur :
+   - Se connecte à la base
+   - Inspecte sa structure (collections, champs, types, relations...)
+   - Génère un prompt dynamique avec le schéma réel
+   - Cache le schéma pour les prochains appels
+4. **Mistral reçoit le prompt** avec la structure exacte de ta base
+5. **La requête générée** correspond précisément à tes données
+
+## Installation
+
+### 1. Vérifier qu'Ollama tourne avec Mistral
+
+```bash
+ollama list
+ollama run mistral "test"
+```
+
+### 2. Installer les dépendances
+
+```bash
+cd api
+pip install -r requirements.txt
+```
+
+### 3. Lancer l'API
+
+```bash
+python main.py
+```
+
+L'API sera sur **http://localhost:8000**  
+Doc interactive : **http://localhost:8000/docs**
+
+## Utilisation
+
+### Option 1 : Configurer toutes les bases en une seule requête (RECOMMANDÉ)
+
+Utilise le fichier `config_example.json` fourni :
+
+```bash
+curl -X POST http://localhost:8000/config/batch \
+  -H "Content-Type: application/json" \
+  -d @config_example.json
+```
+
+Ou directement :
+
+```bash
+curl -X POST http://localhost:8000/config/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "configs": [
+      {
+        "db_type": "mongodb",
+        "name": "pharma_db",
+        "uri": "mongodb://admin:password@localhost:27017",
+        "database": "pharma"
+      },
+      {
+        "db_type": "qdrant",
+        "name": "vectors_db",
+        "url": "http://localhost:6333"
+      },
+      {
+        "db_type": "neo4j",
+        "name": "graph_db",
+        "uri": "bolt://localhost:7687",
+        "user": "neo4j",
+        "password": "password"
+      }
+    ]
+  }'
+```
+
+Réponse :
+```json
+{
+  "total": 3,
+  "successful": ["pharma_db", "vectors_db", "graph_db"],
+  "failed": []
+}
+```
+
+**Avantage** : Si une config échoue, les autres continuent d'être traitées. Tu as un rapport détaillé.
+
+### Option 2 : Ajouter les configs une par une
+
+#### 1. Ajouter une configuration MongoDB
+
+```bash
+curl -X POST http://localhost:8000/config/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "db_type": "mongodb",
+    "name": "pharma_db",
+    "uri": "mongodb://admin:password@localhost:27017",
+    "database": "pharma"
+  }'
+```
+
+#### 2. Ajouter une configuration Qdrant
+
+```bash
+curl -X POST http://localhost:8000/config/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "db_type": "qdrant",
+    "name": "vectors_db",
+    "url": "http://localhost:6333"
+  }'
+```
+
+#### 3. Ajouter une configuration Neo4j
+
+```bash
+curl -X POST http://localhost:8000/config/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "db_type": "neo4j",
+    "name": "graph_db",
+    "uri": "bolt://localhost:7687",
+    "user": "neo4j",
+    "password": "password"
+  }'
+```
+
+### Lister les configs
+
+```bash
+curl http://localhost:8000/config/list
+```
+
+Réponse :
+```json
+{
+  "count": 3,
+  "databases": [
+    {"name": "pharma_db", "type": "mongodb", "schema_inspected": false},
+    {"name": "vectors_db", "type": "qdrant", "schema_inspected": false},
+    {"name": "graph_db", "type": "neo4j", "schema_inspected": false}
+  ]
+}
+```
+
+### Générer une requête
+
+```bash
+curl -X POST http://localhost:8000/generate/pharma_db \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Trouve les antibiotiques qui coûtent moins de 10 euros"}'
+```
+
+Réponse :
+```json
+{
+  "database_name": "pharma_db",
+  "database_type": "mongodb",
+  "user_query": "Trouve les antibiotiques qui coûtent moins de 10 euros",
+  "generated_query": "{\"category\": \"Antibiotique\", \"price\": {\"$lt\": 10}}",
+  "schema_used": {
+    "database": "pharma",
+    "collections": {
+      "medications": {
+        "fields": {
+          "name": {"type": "str", "examples": ["Ibuprofen", "Paracétamol"]},
+          "category": {"type": "str", "examples": ["Anti-inflammatoire", "Antalgique"]},
+          "price": {"type": "float", "examples": [4.5, 2.8]},
+          ...
+        }
+      }
+    }
+  }
+}
+```
+
+**Note** : Le schéma complet est retourné dans `schema_used`. Mistral l'a utilisé pour générer la requête.
+
+### Rafraîchir le schéma
+
+Si tu modifies la structure de ta base :
+
+```bash
+curl -X POST http://localhost:8000/generate/pharma_db/refresh-schema
+```
+
+### Supprimer une config
+
+```bash
+curl -X DELETE http://localhost:8000/config/pharma_db
+```
+
+## Exemples de questions
+
+**MongoDB** :
+- "Trouve les antibiotiques qui coûtent moins de 10 euros"
+- "Médicaments sans ordonnance pour la douleur"
+- "Liste les médicaments de la catégorie Statine"
+
+**Qdrant** :
+- "Je cherche un médicament pour la fièvre"
+- "Trouve-moi des anti-inflammatoires"
+- "Médicaments contre les infections respiratoires"
+
+**Neo4j** :
+- "Quels médicaments traitent la fièvre ?"
+- "Quelles maladies peuvent être traitées par l'Ibuprofen ?"
+- "Combien de médicaments appartiennent à la catégorie Antibiotique ?"
+
+## Ce qui est inspecté automatiquement
+
+### MongoDB
+- Nom de la base
+- Collections disponibles
+- Champs de chaque collection avec types
+- Exemples de valeurs réelles
+
+### Qdrant
+- Collections disponibles
+- Dimension des vecteurs
+- Métrique de distance
+- Nombre de points
+- Champs des payloads avec exemples
+
+### Neo4j
+- Labels des nœuds
+- Propriétés de chaque label avec types
+- Nombre de nœuds par label
+- Types de relations
+- Patterns de relations (Nœud1)-[:REL]->(Nœud2)
+
+## Avantages de cette approche
+
+✅ **Pas besoin de hardcoder les schémas** : l'API les découvre automatiquement  
+✅ **Réutilisable** : ajoute autant de bases que tu veux  
+✅ **Prompts précis** : Mistral voit exactement ta structure de données  
+✅ **Cache intelligent** : le schéma n'est inspecté qu'une fois  
+✅ **Flexible** : rafraîchis le schéma si ta base évolue
+
+## Configuration
+
+Modifie `.env` si besoin :
+
+```env
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=mistral
+```
+
+## Prochaines étapes
+
+- [ ] Ajouter l'exécution des requêtes générées
+- [ ] Persister les configs dans une vraie DB (actuellement en mémoire)
+- [ ] Ajouter une authentification pour l'API
+- [ ] Support de types de bases supplémentaires (PostgreSQL, Elasticsearch...)
