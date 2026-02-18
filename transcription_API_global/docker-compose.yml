@@ -12,10 +12,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Modèles Vosk partagés (téléchargés une seule fois)
       - vosk_models:/app/vosk-model-small-fr-0.22
       - vosk_models_grand:/app/vosk-model-fr-0.22
-      # Cache Whisper partagé
       - whisper_cache:/root/.cache/huggingface
     environment:
       - PYTHONUNBUFFERED=1

@@ -23,8 +23,12 @@ RUN pip install --no-cache-dir \
     numpy
 
 # Copier les sources
-COPY audio_processing.py transcription_engines.py utils.py api_websocket.py ./
+COPY audio_processing.py transcription_engines.py utils.py api_websocket.py setup_vosk_models.py ./
+
+# Copier et rendre exécutable l'entrypoint
+COPY entrypoint_websocket.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api_websocket:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./entrypoint.sh"]
