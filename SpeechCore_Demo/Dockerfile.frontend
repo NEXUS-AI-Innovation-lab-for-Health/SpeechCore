@@ -1,0 +1,16 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package.json package-lock.json ./
+
+# Installer les dépendances
+RUN npm install --legacy-peer-deps && npm install react@18.3.1 react-dom@18.3.1
+
+# Copier le reste du projet
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
