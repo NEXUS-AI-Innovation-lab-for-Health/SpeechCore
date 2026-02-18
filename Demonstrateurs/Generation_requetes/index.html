@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Query Generator — Multi-DB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --mongo: #00ed64;
+    --qdrant: #dc143c;
+    --neo4j: #008cc1;
+    --accent: #7c6aff;
+    --success: #22d3a0;
+    --error: #ff4466;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    padding: 2rem 3rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 1.1rem;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .status-dot {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ─── LAYOUT ─── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  /* ─── SECTION HEADERS ─── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .step-badge {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    letter-spacing: 0.05em;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  /* ─── CONFIG SECTION ─── */
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .db-config {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    background: var(--surface2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .db-config::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .db-config.mongo::before { background: var(--mongo); }
+  .db-config.qdrant::before { background: var(--qdrant); }
+  .db-config.neo4j::before { background: var(--neo4j); }
+
+  .db-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .db-label.mongo { color: var(--mongo); }
+  .db-label.qdrant { color: var(--qdrant); }
+  .db-label.neo4j { color: var(--neo4j); }
+
+  .db-label span {
+    font-size: 1rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    margin-top: 0.8rem;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  input:focus { border-color: var(--accent); }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: #6a59ee; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-sm {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.76rem;
+  }
+
+  .btn-mongo { background: rgba(0,237,100,0.15); color: var(--mongo); border: 1px solid rgba(0,237,100,0.3); }
+  .btn-mongo:hover { background: rgba(0,237,100,0.25); }
+  .btn-qdrant { background: rgba(220,20,60,0.15); color: var(--qdrant); border: 1px solid rgba(220,20,60,0.3); }
+  .btn-qdrant:hover { background: rgba(220,20,60,0.25); }
+  .btn-neo4j { background: rgba(0,140,193,0.15); color: var(--neo4j); border: 1px solid rgba(0,140,193,0.3); }
+  .btn-neo4j:hover { background: rgba(0,140,193,0.25); }
+
+  .config-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  /* ─── TOAST / FEEDBACK ─── */
+  #toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    z-index: 999;
+    max-width: 360px;
+    pointer-events: none;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #toast.ok { background: rgba(34,211,160,0.2); border: 1px solid var(--success); color: var(--success); }
+  #toast.err { background: rgba(255,68,102,0.2); border: 1px solid var(--error); color: var(--error); }
+
+  /* ─── QUERY PANELS ─── */
+  .query-panels {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .query-panel {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    overflow: hidden;
+  }
+
+  .query-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .query-panel-header .db-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .query-panel-body {
+    padding: 1.2rem;
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-end;
+  }
+
+  .query-input-wrap {
+    flex: 1;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    resize: vertical;
+    min-height: 70px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+  textarea:focus { border-color: var(--accent); }
+
+  /* ─── RESULTS ─── */
+  .result-box {
+    margin: 0 1.2rem 1.2rem;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: none;
+  }
+  .result-box.visible { display: block; }
+
+  .result-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .result-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .result-content {
+    padding: 1rem;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 280px;
+    overflow-y: auto;
+    color: #a8b4d8;
+    display: none;
+  }
+  .result-content.active { display: block; }
+
+  .result-content::-webkit-scrollbar { width: 4px; }
+  .result-content::-webkit-scrollbar-track { background: transparent; }
+  .result-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Highlight JSON */
+  .json-key { color: #7c9ef8; }
+  .json-str { color: #a8d8a8; }
+  .json-num { color: #f8c76c; }
+  .json-bool { color: var(--qdrant); }
+
+  /* ─── LOADER ─── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── CONFIG STATUS LIST ─── */
+  #config-status {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.72rem;
+  }
+
+  .config-badge {
+    padding: 0.25rem 0.7rem;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .config-badge.ok { background: rgba(34,211,160,0.1); color: var(--success); border: 1px solid rgba(34,211,160,0.3); }
+  .config-badge.fail { background: rgba(255,68,102,0.1); color: var(--error); border: 1px solid rgba(255,68,102,0.3); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    header { padding: 1rem 1.5rem; }
+    main { padding: 2rem 1rem; }
+    .config-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡</div>
+  <h1>Query Generator</h1>
+  <div class="status-dot">
+    <div class="dot" id="api-dot"></div>
+    <span id="api-status">api non connectée</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ─── STEP 1 : API BASE URL ─── -->
+  <div class="card">
+    <div class="section-header">
+      <span class="step-badge">CONFIG</span>
+      <span class="section-title">Endpoint API</span>
+    </div>
+    <div style="display:flex; gap:0.8rem; align-items:center;">
+      <input id="api-url" type="text" value="http://localhost:8000" style="max-width:340px" placeholder="http://localhost:8000">
+      <button class="btn btn-primary btn-sm" onclick="checkApi()">Vérifier</button>
+    </div>
+  </div>
+
+  <!-- ─── STEP 2 : CONFIG BASES ─── -->
+  <div class="card">
+    <div class="section-header">
+      <span class="step-badge">01</span>
+      <span class="section-title">Configuration des bases de données</span>
+    </div>
+
+    <div class="config-grid">
+
+      <!-- MongoDB -->
+      <div class="db-config mongo">
+        <div class="db-label mongo"><span>🍃</span> MongoDB</div>
+        <label>Nom (db_name)</label>
+        <input id="mongo-name" value="pharma_db">
+        <label>URI</label>
+        <input id="mongo-uri" value="mongodb://admin:password@localhost:27018">
+        <label>Database</label>
+        <input id="mongo-db" value="pharma">
+      </div>
+
+      <!-- Qdrant -->
+      <div class="db-config qdrant">
+        <div class="db-label qdrant"><span>🔴</span> Qdrant</div>
+        <label>Nom (db_name)</label>
+        <input id="qdrant-name" value="vectors_db">
+        <label>URL</label>
+        <input id="qdrant-url" value="http://localhost:6333">
+      </div>
+
+      <!-- Neo4j -->
+      <div class="db-config neo4j">
+        <div class="db-label neo4j"><span>🔵</span> Neo4j</div>
+        <label>Nom (db_name)</label>
+        <input id="neo4j-name" value="graph_db">
+        <label>URI Bolt</label>
+        <input id="neo4j-uri" value="bolt://localhost:7687">
+        <label>User</label>
+        <input id="neo4j-user" value="neo4j">
+        <label>Password</label>
+        <input id="neo4j-pass" type="password" value="password">
+      </div>
+    </div>
+
+    <div class="config-actions">
+      <button class="btn btn-primary" id="btn-config" onclick="sendBatchConfig()">
+        <span>⚡</span> Envoyer les 3 configs (batch)
+      </button>
+      <div id="config-status"></div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 3 : GÉNÉRATION ─── -->
+  <div class="card">
+    <div class="section-header">
+      <span class="step-badge">02</span>
+      <span class="section-title">Génération de requêtes</span>
+    </div>
+
+    <div class="query-panels">
+
+      <!-- MongoDB -->
+      <div class="query-panel">
+        <div class="query-panel-header">
+          <span class="db-tag" style="color:var(--mongo)">🍃 MongoDB</span>
+          <span style="color:var(--muted); font-size:0.72rem;" id="mongo-db-name-label">pharma_db</span>
+        </div>
+        <div class="query-panel-body">
+          <div class="query-input-wrap">
+            <textarea id="mongo-query" placeholder="Ex: Trouve les antibiotiques qui coûtent moins de 10 euros">Trouve les antibiotiques qui coûtent moins de 10 euros</textarea>
+          </div>
+          <button class="btn btn-sm btn-mongo" id="btn-mongo" onclick="generateQuery('mongo')">Générer</button>
+        </div>
+        <div class="result-box" id="result-mongo">
+          <div class="result-tabs">
+            <div class="result-tab active" onclick="switchTab('mongo','query')">Requête</div>
+            <div class="result-tab" onclick="switchTab('mongo','schema')">Schéma</div>
+            <div class="result-tab" onclick="switchTab('mongo','raw')">Raw JSON</div>
+          </div>
+          <div class="result-content active" id="tab-mongo-query"></div>
+          <div class="result-content" id="tab-mongo-schema"></div>
+          <div class="result-content" id="tab-mongo-raw"></div>
+        </div>
+      </div>
+
+      <!-- Qdrant -->
+      <div class="query-panel">
+        <div class="query-panel-header">
+          <span class="db-tag" style="color:var(--qdrant)">🔴 Qdrant</span>
+          <span style="color:var(--muted); font-size:0.72rem;" id="qdrant-db-name-label">vectors_db</span>
+        </div>
+        <div class="query-panel-body">
+          <div class="query-input-wrap">
+            <textarea id="qdrant-query" placeholder="Ex: Je cherche un médicament pour la fièvre">Je cherche un médicament pour la fièvre</textarea>
+          </div>
+          <button class="btn btn-sm btn-qdrant" id="btn-qdrant" onclick="generateQuery('qdrant')">Générer</button>
+        </div>
+        <div class="result-box" id="result-qdrant">
+          <div class="result-tabs">
+            <div class="result-tab active" onclick="switchTab('qdrant','query')">Requête</div>
+            <div class="result-tab" onclick="switchTab('qdrant','schema')">Schéma</div>
+            <div class="result-tab" onclick="switchTab('qdrant','raw')">Raw JSON</div>
+          </div>
+          <div class="result-content active" id="tab-qdrant-query"></div>
+          <div class="result-content" id="tab-qdrant-schema"></div>
+          <div class="result-content" id="tab-qdrant-raw"></div>
+        </div>
+      </div>
+
+      <!-- Neo4j -->
+      <div class="query-panel">
+        <div class="query-panel-header">
+          <span class="db-tag" style="color:var(--neo4j)">🔵 Neo4j</span>
+          <span style="color:var(--muted); font-size:0.72rem;" id="neo4j-db-name-label">graph_db</span>
+        </div>
+        <div class="query-panel-body">
+          <div class="query-input-wrap">
+            <textarea id="neo4j-query" placeholder="Ex: Quels médicaments traitent la fièvre ?">Quels médicaments traitent la fièvre ?</textarea>
+          </div>
+          <button class="btn btn-sm btn-neo4j" id="btn-neo4j" onclick="generateQuery('neo4j')">Générer</button>
+        </div>
+        <div class="result-box" id="result-neo4j">
+          <div class="result-tabs">
+            <div class="result-tab active" onclick="switchTab('neo4j','query')">Requête</div>
+            <div class="result-tab" onclick="switchTab('neo4j','schema')">Schéma</div>
+            <div class="result-tab" onclick="switchTab('neo4j','raw')">Raw JSON</div>
+          </div>
+          <div class="result-content active" id="tab-neo4j-query"></div>
+          <div class="result-content" id="tab-neo4j-schema"></div>
+          <div class="result-content" id="tab-neo4j-raw"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ─── HELPERS ───────────────────────────────────────────
+
+function getApiUrl() {
+  return document.getElementById('api-url').value.replace(/\/$/, '');
+}
+
+function toast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, 3500);
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = `<span class="spinner"></span> ...`;
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+function highlightJson(obj) {
+  const str = JSON.stringify(obj, null, 2);
+  return str
+    .replace(/("[\w\s]+")\s*:/g, '<span class="json-key">$1</span>:')
+    .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+    .replace(/:\s*(true|false|null)/g, ': <span class="json-bool">$1</span>');
+}
+
+// ─── VÉRIF API ─────────────────────────────────────────
+
+async function checkApi() {
+  try {
+    const r = await fetch(getApiUrl() + '/');
+    const dot = document.getElementById('api-dot');
+    const label = document.getElementById('api-status');
+    if (r.ok) {
+      dot.className = 'dot ok';
+      label.textContent = 'api connectée';
+      toast('API accessible ✓');
+    } else {
+      throw new Error();
+    }
+  } catch {
+    document.getElementById('api-dot').className = 'dot';
+    document.getElementById('api-status').textContent = 'api inaccessible';
+    toast('Impossible de joindre l\'API', 'err');
+  }
+}
+
+// ─── BATCH CONFIG ──────────────────────────────────────
+
+async function sendBatchConfig() {
+  setLoading('btn-config', true);
+
+  const payload = {
+    configs: [
+      {
+        db_type: "mongodb",
+        name: document.getElementById('mongo-name').value,
+        uri: document.getElementById('mongo-uri').value,
+        database: document.getElementById('mongo-db').value,
+      },
+      {
+        db_type: "qdrant",
+        name: document.getElementById('qdrant-name').value,
+        url: document.getElementById('qdrant-url').value,
+      },
+      {
+        db_type: "neo4j",
+        name: document.getElementById('neo4j-name').value,
+        uri: document.getElementById('neo4j-uri').value,
+        user: document.getElementById('neo4j-user').value,
+        password: document.getElementById('neo4j-pass').value,
+      }
+    ]
+  };
+
+  try {
+    const r = await fetch(getApiUrl() + '/config/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+
+    // Mettre à jour les labels db_name dans les panels
+    document.getElementById('mongo-db-name-label').textContent = payload.configs[0].name;
+    document.getElementById('qdrant-db-name-label').textContent = payload.configs[1].name;
+    document.getElementById('neo4j-db-name-label').textContent = payload.configs[2].name;
+
+    // Afficher le statut
+    const statusEl = document.getElementById('config-status');
+    statusEl.innerHTML = '';
+    data.successful.forEach(name => {
+      statusEl.innerHTML += `<span class="config-badge ok">✓ ${name}</span>`;
+    });
+    data.failed.forEach(f => {
+      statusEl.innerHTML += `<span class="config-badge fail">✗ ${f.name}: ${f.error}</span>`;
+    });
+
+    if (data.successful.length === data.total) {
+      toast(`${data.total} configs envoyées avec succès ✓`);
+    } else {
+      toast(`${data.successful.length}/${data.total} configs ok — ${data.failed.length} échec(s)`, 'err');
+    }
+  } catch(e) {
+    toast('Erreur lors de l\'envoi des configs: ' + e.message, 'err');
+  }
+
+  setLoading('btn-config', false);
+}
+
+// ─── GÉNÉRATION ────────────────────────────────────────
+
+const DB_MAP = {
+  mongo:  { nameInput: 'mongo-name',  queryInput: 'mongo-query',  btn: 'btn-mongo'  },
+  qdrant: { nameInput: 'qdrant-name', queryInput: 'qdrant-query', btn: 'btn-qdrant' },
+  neo4j:  { nameInput: 'neo4j-name',  queryInput: 'neo4j-query',  btn: 'btn-neo4j'  },
+};
+
+async function generateQuery(db) {
+  const { nameInput, queryInput, btn } = DB_MAP[db];
+  const dbName = document.getElementById(nameInput).value;
+  const query  = document.getElementById(queryInput).value.trim();
+
+  if (!query) { toast('Entre une question d\'abord', 'err'); return; }
+
+  setLoading(btn, true);
+
+  try {
+    const r = await fetch(`${getApiUrl()}/generate/${dbName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      toast(data.detail || 'Erreur API', 'err');
+      setLoading(btn, false);
+      return;
+    }
+
+    // Afficher les résultats
+    const resultBox = document.getElementById(`result-${db}`);
+    resultBox.classList.add('visible');
+
+    // Tab: requête générée
+    const genQ = data.generated_query;
+    document.getElementById(`tab-${db}-query`).innerHTML =
+      typeof genQ === 'object'
+        ? highlightJson(genQ)
+        : `<span style="color:#a8d8a8">${genQ}</span>`;
+
+    // Tab: schéma
+    document.getElementById(`tab-${db}-schema`).innerHTML = highlightJson(data.schema_used);
+
+    // Tab: raw
+    document.getElementById(`tab-${db}-raw`).innerHTML = highlightJson(data);
+
+    toast(`Requête générée pour ${dbName} ✓`);
+  } catch(e) {
+    toast('Erreur réseau: ' + e.message, 'err');
+  }
+
+  setLoading(btn, false);
+}
+
+// ─── TABS ──────────────────────────────────────────────
+
+function switchTab(db, tab) {
+  const panel = document.getElementById(`result-${db}`);
+  panel.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+  panel.querySelectorAll('.result-content').forEach(c => c.classList.remove('active'));
+
+  const tabIdx = { query: 0, schema: 1, raw: 2 };
+  panel.querySelectorAll('.result-tab')[tabIdx[tab]].classList.add('active');
+  document.getElementById(`tab-${db}-${tab}`).classList.add('active');
+}
+
+// ─── SYNC LABELS EN TEMPS RÉEL ─────────────────────────
+
+['mongo-name', 'qdrant-name', 'neo4j-name'].forEach(id => {
+  const db = id.replace('-name', '');
+  document.getElementById(id).addEventListener('input', e => {
+    document.getElementById(`${db}-db-name-label`).textContent = e.target.value || '…';
+  });
+});
+
+// Vérif API au chargement
+checkApi();
+</script>
+</body>
+</html>
