@@ -19,6 +19,7 @@ Endpoints:
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Union, List
 
@@ -42,6 +43,13 @@ app = FastAPI(
     title="Dynamic Query Generator API",
     description="Génère des requêtes depuis du langage naturel avec introspection automatique du schéma",
     version="2.0.0"
+)
+
+app.add_middleware(          
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Service LLM global
