@@ -1,0 +1,56 @@
+services:
+
+  # ─────────────────────────────────────────
+  # API REST  →  http://localhost:8000
+  # Docs      →  http://localhost:8000/docs
+  # ─────────────────────────────────────────
+  api_rest:
+    build:
+      context: .
+      dockerfile: Dockerfile.api_rest
+    container_name: transcription_rest
+    ports:
+      - "8000:8000"
+    volumes:
+      # Modèles Vosk partagés (téléchargés une seule fois)
+      - vosk_models:/app/vosk-model-small-fr-0.22
+      - vosk_models_grand:/app/vosk-model-fr-0.22
+      # Cache Whisper partagé
+      - whisper_cache:/root/.cache/huggingface
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────
+  # API WebSocket  →  ws://localhost:8001/ws/transcribe
+  # Interface web  →  http://localhost:8001
+  # ─────────────────────────────────────────
+  api_websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.api_websocket
+    container_name: transcription_websocket
+    ports:
+      - "8001:8000"
+    volumes:
+      - vosk_models:/app/vosk-model-small-fr-0.22
+      - vosk_models_grand:/app/vosk-model-fr-0.22
+      - whisper_cache:/root/.cache/huggingface
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  vosk_models:
+  vosk_models_grand:
+  whisper_cache:

@@ -1,3 +1,28 @@
+# Utilisation Docker :
+
+## Points importants :
+Les modèles Vosk et le cache Whisper sont dans des volumes Docker partagés entre les deux conteneurs — ils ne sont téléchargés/chargés qu'une seule fois. Si on veux pré-télécharger les modèles Vosk au build (plutôt qu'au premier appel), décommenter la ligne RUN python setup_vosk_models.py dans les Dockerfiles et copie-y setup_vosk_models.py.
+
+Pour le GPU (Whisper config gpu_*), il faudra ajouter dans le service concerné du docker-compose.yml :
+```yml 
+yamldeploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all
+          capabilities: [gpu]```
+
+## Lancer les deux services
+docker compose up --build
+
+# #Ou en arrière-plan
+docker compose up --build -d
+
+## Un seul service
+docker compose up api_rest
+docker compose up api_websocket
+
 # 🎙️ Système de Transcription Audio Modulaire
 
 Architecture modulaire pour la transcription audio avec 3 moteurs (Vosk, Whisper, Gladia) et 3 interfaces (CLI, REST, WebSocket).
