@@ -1,17 +1,74 @@
-# Utilisation Docker :
+# 🐳 Docker — SpeechCore
 
-## Points importants :
-Les modèles Vosk et le cache Whisper sont dans des volumes Docker partagés entre les deux conteneurs — ils ne sont téléchargés/chargés qu'une seule fois. Si on veux pré-télécharger les modèles Vosk au build (plutôt qu'au premier appel), décommenter la ligne RUN python setup_vosk_models.py dans les Dockerfiles et copie-y setup_vosk_models.py.
+## 📁 Fichiers
 
-Pour le GPU (Whisper config gpu_*), il faudra ajouter dans le service concerné du docker-compose.yml :
-```yml 
-yamldeploy:
-  resources:
-    reservations:
-      devices:
-        - driver: nvidia
-          count: all
-          capabilities: [gpu]```
+```
+├── Dockerfile.api_rest        # Image API REST
+├── Dockerfile.api_websocket   # Image API WebSocket
+├── entrypoint_rest.sh         # Script de démarrage REST
+├── entrypoint_websocket.sh    # Script de démarrage WebSocket
+└── docker-compose.yml         # Orchestration des deux services
+```
+
+## 🚀 Démarrage
+
+```bash
+# Premier lancement (build + téléchargement des modèles Vosk ~1.5 GB)
+docker compose up --build
+
+# En arrière-plan
+docker compose up --build -d
+
+# Arrêter
+docker compose down
+```
+
+## 🌐 Services
+
+| Service   | URL                              | Description          |
+|-----------|----------------------------------|----------------------|
+| API REST  | http://localhost:8000            | Endpoints REST       |
+| Docs      | http://localhost:8000/docs       | Swagger UI           |
+| WebSocket | ws://localhost:8001/ws/transcribe| Transcription live   |
+| Web UI    | http://localhost:8001            | Interface de test    |
+
+## 📦 Volumes
+
+Les modèles et caches sont persistés dans des volumes Docker partagés entre les deux conteneurs :
+
+| Volume            | Contenu                        | Taille   |
+|-------------------|--------------------------------|----------|
+| `vosk_models`     | vosk-model-small-fr-0.22       | ~41 MB   |
+| `vosk_models_grand` | vosk-model-fr-0.22           | ~1.5 GB  |
+| `whisper_cache`   | Cache modèles Whisper          | variable |
+
+> ⚠️ Au **premier démarrage**, les deux conteneurs téléchargent les modèles en parallèle.
+> Pour éviter un double téléchargement, lance d'abord le REST seul, puis les deux :
+> ```bash
+> docker compose up api_rest      # attendre la fin du téléchargement
+> # Ctrl+C
+> docker compose up -d            # relancer les deux
+> ```
+
+## 🔧 Commandes utiles
+
+```bash
+# Voir les logs en temps réel
+docker compose logs -f
+
+# Logs d'un seul service
+docker compose logs -f api_rest
+docker compose logs -f api_websocket
+
+# Rebuilder un seul service
+docker compose build api_rest
+
+# Redémarrer un service
+docker compose restart api_rest
+
+# Supprimer les conteneurs ET les volumes (repart de zéro)
+docker compose down -v
+```
 
 ## Lancer les deux services
 docker compose up --build
@@ -22,6 +79,8 @@ docker compose up --build -d
 ## Un seul service
 docker compose up api_rest
 docker compose up api_websocket
+
+---
 
 # 🎙️ Système de Transcription Audio Modulaire
 
