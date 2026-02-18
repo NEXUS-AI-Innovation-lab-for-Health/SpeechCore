@@ -45,22 +45,22 @@ Vérifiez sur http://localhost:11434
 ## 🧪 Utilisation
 
 1. Ouvrez http://localhost:5173
-2. Allez dans "Formulaires"
-3. Cliquez sur le micro et parlez
-4. Cliquez sur "Remplir automatiquement avec l'IA"
-5. Le formulaire se remplit tout seul ! 🪄
+2. Allez dans "Reconnaissance Vocale"
+3. Choissisez le type d'API que vous souhaitez utiliser (Whisper, Vosk, Gladia) et configurer selon vos besoins
+4. Cliquez sur le micro et parlez
+5. A la fin de l'enregistrement, enregistrer la transcription.
 
 ## 📁 Structure du projet
 ```
 SAE_PROJET15/
-├── backend/          → API Python (FastAPI + Whisper + Ollama)
+├── backend/          → API Python (FastAPI + Whisper/Vosk/Gladia + Ollama)
 ├── app/              → Interface React (Vite + TypeScript)
 └── docs/             → Documentation
 ```
 
 ## 🛠️ Technologies
 
-- **Backend** : Python, FastAPI, Whisper, Ollama
+- **Backend** : Python, FastAPI, Whisper, Vosk, Gladia, Ollama
 - **App** : React, TypeScript, Vite, Tailwind CSS
 - **IA** : Whisper (transcription), Mistral (extraction)
 
