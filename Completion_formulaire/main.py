@@ -1,9 +1,17 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from .schemas import ExtractionRequest, ExtractionResponse
 from .extractor import FormExtractor
 from .llm_client import LLMClient
 
 app = FastAPI()
+
+app.add_middleware(          
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 llm_client = LLMClient()
 extractor = FormExtractor(llm_client)
