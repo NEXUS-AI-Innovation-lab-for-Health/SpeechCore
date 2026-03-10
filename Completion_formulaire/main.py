@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .schemas import ExtractionRequest, ExtractionResponse
 from .extractor import FormExtractor
 from .llm_client import LLMClient
+import traceback
 
 app = FastAPI()
 
@@ -22,4 +23,5 @@ async def extract_form(req: ExtractionRequest):
         data = await extractor.extract(req.form, req.text)
         return {"data": data}
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))

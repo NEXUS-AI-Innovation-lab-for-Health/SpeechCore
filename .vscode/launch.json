@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Completion_formulaire",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "Completion_formulaire.main:app",
+                "--reload"
+            ],
+            "jinja": true
+        },
+        {
             "name": "API Génération de requêtes",
             "type": "debugpy",
             "request": "launch",

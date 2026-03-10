@@ -447,7 +447,8 @@
         <label>Nom (db_name)</label>
         <input id="mongo-name" value="pharma_db">
         <label>URI</label>
-        <input id="mongo-uri" value="mongodb://admin:password@localhost:27018">
+        <!-- <input id="mongo-uri" value="mongodb://admin:password@localhost:27018"> -->
+        <input id="mongo-uri" value="mongodb://admin:password@host.docker.internal:27018">
         <label>Database</label>
         <input id="mongo-db" value="pharma">
       </div>
@@ -458,7 +459,8 @@
         <label>Nom (db_name)</label>
         <input id="qdrant-name" value="vectors_db">
         <label>URL</label>
-        <input id="qdrant-url" value="http://localhost:6333">
+        <!-- <input id="qdrant-url" value="http://localhost:6333"> -->
+        <input id="qdrant-url" value="http://host.docker.internal:6333">
       </div>
 
       <!-- Neo4j -->
@@ -467,7 +469,8 @@
         <label>Nom (db_name)</label>
         <input id="neo4j-name" value="graph_db">
         <label>URI Bolt</label>
-        <input id="neo4j-uri" value="bolt://localhost:7687">
+        <!-- <input id="neo4j-uri" value="bolt://localhost:7687"> -->
+        <input id="neo4j-uri" value="bolt://host.docker.internal:7687">
         <label>User</label>
         <input id="neo4j-user" value="neo4j">
         <label>Password</label>
