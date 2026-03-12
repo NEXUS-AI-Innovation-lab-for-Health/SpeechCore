@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Installer les dépendances fraîches (ignore le node_modules local cassé)
-RUN npm install --legacy-peer-deps && npm install react@18.3.1 react-dom@18.3.1
+RUN npm install --legacy-peer-deps
 
 # Copier le reste du projet (node_modules exclu via .dockerignore)
 COPY . .
