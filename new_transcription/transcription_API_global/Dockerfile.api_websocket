@@ -29,7 +29,7 @@ COPY audio_processing.py transcription_engines.py utils.py api_websocket.py setu
 
 # Copier et rendre exécutable l'entrypoint
 COPY entrypoint_websocket.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
+RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 8000
 
