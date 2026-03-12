@@ -12,6 +12,21 @@ Application de transcription audio médicale en temps réel. Elle convertit la p
 
 ---
 
+## Configurer les clés API (optionnel)
+Pour utiliser les moteurs de transcription cloud (Groq ou Gladia), vous devez fournir une clé API. Si vous n'en avez pas, vous pouvez toujours utiliser les moteurs locaux (Whisper ou Vosk) qui ne nécessitent aucune configuration.
+
+1. créez un fichier `.env` à la racine du projet (au même niveau que `docker-compose.yml`) avec le contenu suivant :
+
+```
+GROQ_API_KEY=votre_cle_groq_ici
+GLADIA_API_KEY=votre_cle_gladia_ici
+```
+
+Redémarrez ensuite l'application pour que les clés soient prises en compte (sans supprimer les conteneurs) :
+```bash
+docker compose -f new_transcription/docker-compose.yml up --no-build
+```
+
 ## Lancement
 
 Ouvrez un terminal dans le dossier du projet et exécutez :
