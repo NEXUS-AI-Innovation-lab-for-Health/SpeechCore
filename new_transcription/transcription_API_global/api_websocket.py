@@ -44,6 +44,12 @@ app.add_middleware(
 # run_in_executor les exécute dans un thread séparé sans bloquer FastAPI.
 _executor = ThreadPoolExecutor(max_workers=2)
 
+@app.on_event("startup")
+async def preload_models():
+    from transcription_engines import _get_whisper_model
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(_executor, lambda: _get_whisper_model("cpu_rapide"))
+    print("✅ Whisper base prêt")
 
 # ── Page HTML de test ──────────────────────────────────────────────────────────
 HTML_PAGE = """

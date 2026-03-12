@@ -281,7 +281,7 @@ def transcrire_whisper(
     segments, info = model.transcribe(
         str(fichier_a_transcrire),
         language='fr',
-        beam_size=5,
+        beam_size=1,
         vad_filter=True
     )
     
