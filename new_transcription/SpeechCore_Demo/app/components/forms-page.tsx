@@ -37,55 +37,6 @@ const MEDICAL_FORM: FormSchema = {
       type: "number",
       required: false,
       semantic_hint: "Âge du patient en années"
-    },
-    {
-      name: "sexe",
-      label: "Sexe",
-      type: "text",
-      required: false,
-      semantic_hint: "Homme, Femme ou Autre"
-    },
-    {
-      name: "symptomes",
-      label: "Symptômes",
-      type: "textarea",
-      required: true,
-      semantic_hint: "Liste des symptômes présentés par le patient"
-    },
-    {
-      name: "temperature",
-      label: "Température (°C)",
-      type: "number",
-      required: false,
-      semantic_hint: "Température corporelle en degrés Celsius"
-    },
-    {
-      name: "tension",
-      label: "Tension artérielle",
-      type: "text",
-      required: false,
-      semantic_hint: "Tension artérielle (ex: 120/80)"
-    },
-    {
-      name: "antecedents",
-      label: "Antécédents médicaux",
-      type: "textarea",
-      required: false,
-      semantic_hint: "Historique médical, maladies chroniques, allergies"
-    },
-    {
-      name: "traitement",
-      label: "Traitement actuel",
-      type: "textarea",
-      required: false,
-      semantic_hint: "Médicaments pris actuellement"
-    },
-    {
-      name: "diagnostic",
-      label: "Diagnostic préliminaire",
-      type: "textarea",
-      required: false,
-      semantic_hint: "Première évaluation du médecin"
     }
   ]
 };
@@ -169,7 +120,7 @@ export default function FormsPage() {
     try {
       const result = await extractFormData(MEDICAL_FORM, transcript);
       
-      if (result.success) {
+      if (result.data) {
         setFormData(result.data);
         setError(null);
       } else {
@@ -386,7 +337,7 @@ export default function FormsPage() {
                     value={formData[field.name] || ''}
                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-black"
                     placeholder={`Entrez ${field.label.toLowerCase()}`}
                   />
                 ) : (
@@ -394,7 +345,7 @@ export default function FormsPage() {
                     type={field.type}
                     value={formData[field.name] || ''}
                     onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-black"
                     placeholder={`Entrez ${field.label.toLowerCase()}`}
                   />
                 )}

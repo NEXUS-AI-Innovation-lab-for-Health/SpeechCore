@@ -380,11 +380,10 @@ def transcrire_groq(
 
     for seg in (response.segments or []):
         segments_avec_temps.append({
-            'start': seg.start,
-            'end':   seg.end,
-            'text':  seg.text.strip()
+            'start': seg['start'],
+            'end':   seg['end'],
+            'text':  seg['text'].strip()
         })
-
     segments_diarises = None
     if nb_locuteurs > 0 and len(segments_avec_temps) >= 2:
         segments_diarises = diarizer_avec_resemblyzer(

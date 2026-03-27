@@ -1,23 +1,22 @@
 /**
- * api.ts — Services pour communiquer avec l'API Python
+ * api.ts — Services pour communiquer avec les APIs Python
  *
- * PORT 8000 → api_websocket.py  (WebSocket /ws/transcribe + REST /extract)
- *
- * La connexion WebSocket est gérée directement dans voice-recognition-page.tsx.
- * Ce fichier gère uniquement les appels HTTP REST (/extract pour le formulaire).
+ * PORT 8000 → api-websocket  (WebSocket /ws/transcribe + REST /extract Ollama via host)
+ * PORT 8001 → api-completion (REST /extract — Ollama via conteneur Docker)
  */
 
-const API_REST_URL = "http://localhost:8000";
+const API_WEBSOCKET_URL  = "http://localhost:8000";
+const API_COMPLETION_URL = "http://localhost:8001";
 
 // ══════════════════════════════════════════════════════════
 // TYPES
 // ══════════════════════════════════════════════════════════
 
 export interface FormField {
-  name: string;
-  label: string;
-  type: string;
-  required: boolean;
+  name:          string;
+  label:         string;
+  type:          string;
+  required:      boolean;
   semantic_hint?: string;
 }
 
@@ -26,38 +25,44 @@ export interface FormSchema {
 }
 
 export interface TranscriptionResponse {
-  transcription_complete: string;
+  transcription_complete:       string;
   transcription_avec_locuteurs: string;
   statistiques: {
-    nombre_mots: number;
+    nombre_mots:      number;
     nombre_locuteurs: number;
-    nombre_segments: number;
-    langue_detectee: string;
+    nombre_segments:  number;
+    langue_detectee:  string;
   };
   locution_separee: Array<{ locuteur: string; texte: string }>;
 }
 
 export interface ExtractResponse {
   success: boolean;
-  data: Record<string, string>;
+  data:    Record<string, string>;
 }
 
 // ══════════════════════════════════════════════════════════
-// SANTÉ DU SERVEUR (port 8000)
-// Vérifier que api_rest.py est lancé
+// SANTÉ DES SERVEURS
 // ══════════════════════════════════════════════════════════
 
 export const checkServerHealth = async (): Promise<void> => {
-  const response = await fetch(`${API_REST_URL}/`, {
+  const response = await fetch(`${API_WEBSOCKET_URL}/`, {
     method: "GET",
     signal: AbortSignal.timeout(3000),
   });
-  if (!response.ok) throw new Error("Serveur inaccessible");
+  if (!response.ok) throw new Error("api-websocket inaccessible (port 8000)");
+};
+
+export const checkCompletionHealth = async (): Promise<void> => {
+  const response = await fetch(`${API_COMPLETION_URL}/`, {
+    method: "GET",
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!response.ok) throw new Error("api-completion inaccessible (port 8001)");
 };
 
 // ══════════════════════════════════════════════════════════
 // TRANSCRIPTION FICHIER COMPLET (port 8000)
-// Optionnel — pour transcrire un fichier WAV entier
 // ══════════════════════════════════════════════════════════
 
 export const transcribeAudio = async (
@@ -67,9 +72,9 @@ export const transcribeAudio = async (
   const formData = new FormData();
   formData.append("file", audioBlob, "recording.wav");
 
-  const response = await fetch(`${API_REST_URL}/${engine}`, {
+  const response = await fetch(`${API_WEBSOCKET_URL}/${engine}`, {
     method: "POST",
-    body: formData,
+    body:   formData,
   });
 
   if (!response.ok) {
@@ -81,27 +86,28 @@ export const transcribeAudio = async (
 };
 
 // ══════════════════════════════════════════════════════════
-// EXTRACTION FORMULAIRE AVEC OLLAMA (port 8000)
-// Utilisée par forms-page.tsx
+// EXTRACTION FORMULAIRE — PORT 8001 (api-completion, Docker)
+// Format attendu par api-completion : { form: { fields }, text }
 // ══════════════════════════════════════════════════════════
 
 export const extractFormData = async (
-  form: FormSchema,
+  form:       FormSchema,
   transcript: string
 ): Promise<ExtractResponse> => {
-  const response = await fetch(`${API_REST_URL}/extract`, {
-    method: "POST",
+  const response = await fetch(`${API_COMPLETION_URL}/extract`, {
+    method:  "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      transcript: transcript,
-      fields: form.fields,
+      form: { fields: form.fields },   // ← format api-completion
+      text: transcript,                // ← "text" et non "transcript"
     }),
   });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(
-      error.detail || "Erreur extraction. Vérifiez que Ollama est lancé (ollama serve)"
+      error.detail ||
+      "Erreur extraction — vérifiez que api-completion (port 8001) et Ollama sont lancés"
     );
   }
 

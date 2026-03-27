@@ -301,7 +301,7 @@
     const payload = { form: FORM_SCHEMA, text };
 
     try {
-      const res = await fetch('http://127.0.0.1:8001/extract', {
+      const res = await fetch('http://127.0.0.1:8000/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
