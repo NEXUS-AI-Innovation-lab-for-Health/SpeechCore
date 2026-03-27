@@ -41,7 +41,7 @@ CONFIGS_WHISPER = {
     "ultra_rapide":  {"model_size": "tiny",     "device": "auto", "compute_type": "int8"}
 }
 
-GLADIA_API_KEY = os.environ.get("GLADIA_API_KEY", "f737837f-c735-4b5b-bed5-6e0322875492")
+GLADIA_API_KEY = os.environ.get("GLADIA_API_KEY", "")
 GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")   # Configurer dans docker-compose.yml ou .env
 
 
@@ -380,9 +380,9 @@ def transcrire_groq(
 
     for seg in (response.segments or []):
         segments_avec_temps.append({
-            'start': seg.start,
-            'end':   seg.end,
-            'text':  seg.text.strip()
+            'start': seg['start'],
+            'end':   seg['end'],
+            'text':  seg['text'].strip()
         })
 
     segments_diarises = None
