@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# requirements.txt est au même niveau que ce Dockerfile
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# On copie tout le contenu du dossier dans un sous-dossier qui forme le package
+COPY . ./API_generation_requetes/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "API_generation_requetes.main:app", "--host", "0.0.0.0", "--port", "8000"]

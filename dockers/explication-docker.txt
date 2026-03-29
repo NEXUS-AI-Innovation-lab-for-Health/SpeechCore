@@ -1,0 +1,91 @@
+================================================================================
+                        SAE — FICHE TECHNIQUE DOCKER
+================================================================================
+
+L'application SAE est composée de plusieurs services conteneurisés orchestrés
+par Docker Compose. Chaque service remplit un rôle précis dans le pipeline :
+transcription audio, complétion de formulaire, inférence LLM et interface web.
+
+________________________________________________________________________________
+1. SERVICES DOCKER
+________________________________________________________________________________
+
+[ ollama — Modèle de langage (LLM) ]
+  Image    : ollama/ollama
+  Port     : 11434
+  Volume   : ollama_data:/root/.ollama
+  Rôle     : Héberge et sert le modèle Mistral en local via l'API REST Ollama.
+
+[ ollama-init — Initialisation du modèle ]
+  Image    : ollama/ollama (exécution unique, restart: no)
+  Déclenche après le healthcheck Ollama.
+  Rôle     : Télécharge automatiquement le modèle Mistral au premier lancement.
+
+[ api-websocket — API Transcription (port 8000) ]
+  Build    : transcription_API_global/Dockerfile.api_websocket
+  Base     : python:3.11-slim + ffmpeg, vosk, faster-whisper, groq, FastAPI
+  Port     : 8000
+  Volumes  : vosk-model-fr-0.22, vosk-model-small-fr-0.22
+  Env.     : GLADIA_API_KEY, GROQ_API_KEY, OLLAMA_URL, OLLAMA_MODEL
+  Rôle     : Reçoit l'audio en WebSocket, effectue la transcription
+             (Vosk / Whisper / Gladia) et communique avec Ollama.
+
+[ api-completion — Complétion formulaire (port 8001) ]
+  Build    : Completion_formulaire/Dockerfile
+  Base     : python:3.11-slim + requirements.txt / Uvicorn
+  Port     : 8001
+  Env.     : OLLAMA_HOST=http://ollama:11434
+  Rôle     : Exploite le LLM Ollama pour compléter automatiquement les champs
+             d'un formulaire médical.
+
+[ frontend — Interface utilisateur (port 5173) ]
+  Build    : SpeechCore_Demo/Dockerfile.frontend
+  Port     : 5173
+  Dépend de: api-websocket
+  Rôle     : Sert la démo SpeechCore ; communique avec l'API WebSocket
+             pour l'affichage en temps réel.
+
+________________________________________________________________________________
+2. DÉPLOIEMENT
+________________________________________________________________________________
+
+  Prérequis : Docker >= 24 et Docker Compose >= 2.20
+
+  # 1. Cloner le dépôt
+  git clone <url-du-repo> && cd <dossier>
+
+  # 2. Créer le fichier .env avec les clés API
+  echo "GLADIA_API_KEY=xxx\nGROQ_API_KEY=yyy" > .env
+
+  # 3. Lancer tous les services (build + démarrage)
+  docker compose up --build -d
+
+  # 4. Vérifier l'état des conteneurs
+  docker compose ps
+
+________________________________________________________________________________
+3. RÉSEAU INTERNE & VOLUMES
+________________________________________________________________________________
+
+  Réseau (bridge Docker) :
+    api-websocket  --> http://ollama:11434
+    api-completion --> http://ollama:11434
+    frontend       --> http://api-websocket:8000
+
+  Volumes persistants :
+    ollama_data              : Poids des modèles Ollama (Mistral)
+    speechcore_vosk_grand    : Modèle Vosk FR grande taille
+    speechcore_vosk_petit    : Modèle Vosk FR petite taille
+
+________________________________________________________________________________
+4. PORTS EXPOSÉS (hôte)
+________________________________________________________________________________
+
+  Port   | Service
+  -------|------------------------------------------
+  11434  | Ollama (LLM REST API)
+  8000   | api-websocket (Transcription + WebSocket)
+  8001   | api-completion (Complétion formulaire)
+  5173   | frontend (Interface démo SpeechCore)
+
+================================================================================

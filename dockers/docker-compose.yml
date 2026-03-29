@@ -1,0 +1,105 @@
+services:
+
+  # ─── Ollama (LLM) ─────────────────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  # ─── Pull Mistral au premier lancement ───────────────────────────────────
+  ollama-init:
+    image: ollama/ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: sh -c "ollama pull mistral"
+    restart: "no"
+
+  # ─── API WebSocket Transcription (port 8000) ──────────────────────────────
+  api-websocket:
+    build:
+      context: ./transcription_API_global
+      dockerfile: Dockerfile.api_websocket
+    ports:
+      - "8000:8000"
+    volumes:
+      - vosk_models:/app/vosk-model-fr-0.22
+      - vosk_models_small:/app/vosk-model-small-fr-0.22
+    environment:
+      GLADIA_API_KEY: "${GLADIA_API_KEY:-}"
+      GROQ_API_KEY:   "${GROQ_API_KEY:-}"
+      # Pointe vers le conteneur Ollama (réseau Docker interne)
+      OLLAMA_URL:   "http://ollama:11434"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-mistral}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ─── API Génération de requêtes (port 8002) ───────────────────────────────
+  # ⚠️ Port changé 8000→8002 (conflit avec api-websocket)
+  # api-generation:
+  #   build:
+  #     context: ../API_generation_requetes
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8002:8000"
+  #   environment:
+  #     OLLAMA_HOST:  http://ollama:11434
+  #     OLLAMA_MODEL: mistral
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+  # ─── API Complétion de formulaire (port 8001) ─────────────────────────────
+  api-completion:
+    build:
+      context: ../Completion_formulaire
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Frontend Demo (port 5173) ────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./SpeechCore_Demo
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-websocket
+    restart: unless-stopped
+
+# ─── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  ollama_data:
+  vosk_models:
+    name: speechcore_vosk_grand
+  vosk_models_small:
+    name: speechcore_vosk_petit
